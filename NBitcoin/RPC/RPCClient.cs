@@ -1,5 +1,6 @@
 ﻿#if !NOJSONNET
 using NBitcoin.DataEncoders;
+using NBitcoin.JsonConverters;
 using NBitcoin.Protocol;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -1142,6 +1143,61 @@ namespace NBitcoin.RPC
 		public bool SetTxFee(FeeRate feeRate)
 		{
 			return SendCommand(RPCOperations.settxfee, new[] { feeRate.FeePerK.ToString() }).Result.ToString() == "true";
+		}
+
+		public async Task<uint256[]> GenerateAsync(int nBlocks)
+		{
+			if(nBlocks < 0)
+				throw new ArgumentOutOfRangeException("nBlocks");
+			var result = (JArray)(await SendCommandAsync(RPCOperations.generate, nBlocks).ConfigureAwait(false)).Result;
+			return result.Select(r => new uint256(r.Value<string>())).ToArray();
+		}
+
+		public uint256[] Generate(int nBlocks)
+		{
+			return GenerateAsync(nBlocks).GetAwaiter().GetResult();
+		}
+
+		public class IssueAssetResponse
+		{
+			[JsonProperty("txid")]
+			public uint256 TransactionId
+			{
+				get; set;
+			}
+
+			[JsonProperty("entropy")]
+			public uint256 Entropy
+			{
+				get; set;
+			}
+
+			[JsonProperty("asset")]
+			public uint256 AssetType
+			{
+				get; set;
+			}
+
+			[JsonProperty("token")]
+			public uint256 TokenType
+			{
+				get; set;
+			}
+		}
+
+		public IssueAssetResponse IssueAsset(int assetamount, int tokenamount, bool? blind = null)
+		{
+			return IssueAssetAsync(assetamount, tokenamount, blind).GetAwaiter().GetResult();
+		}
+		public async Task<IssueAssetResponse> IssueAssetAsync(int assetamount, int tokenamount, bool? blind = null)
+		{
+			RPCResponse r = null;
+			if(blind.HasValue)
+				r = await SendCommandAsync("issueasset", assetamount, tokenamount, blind.Value).ConfigureAwait(false);
+			else
+				r = await SendCommandAsync("issueasset", assetamount, tokenamount).ConfigureAwait(false);
+
+			return Serializer.ToObject<IssueAssetResponse>(r.ResultString);
 		}
 
 		#endregion
