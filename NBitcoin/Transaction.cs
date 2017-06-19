@@ -20,9 +20,11 @@ namespace NBitcoin
 				return (hash == uint256.Zero && n == uint.MaxValue);
 			}
 		}
+
 		private uint256 hash = uint256.Zero;
 		private uint n;
-
+		internal const uint OUTPOINT_INDEX_MASK = 0x7fffffff;
+		internal const uint OUTPOINT_ISSUANCE_FLAG = (1U << 31);
 
 		public uint256 Hash
 		{
@@ -45,6 +47,11 @@ namespace NBitcoin
 			{
 				n = value;
 			}
+		}
+
+		public OutPoint Clone()
+		{
+			return new OutPoint(Hash, n);
 		}
 
 		public static bool TryParse(string str, out OutPoint result)
@@ -167,6 +174,228 @@ namespace NBitcoin
 		}
 	}
 
+	public class ConfidentialValue : ConfidentialCommitment
+	{
+		static Def _Def = new Def()
+		{
+			ExplicitSize = 9,
+			PrefixA = 8,
+			PrefixB = 9
+		};
+		protected override Def GetDef()
+		{
+			return _Def;
+		}
+
+		public ConfidentialValue()
+		{
+
+		}
+		public ConfidentialValue(Money amount) : base(ToCommitment(amount))
+		{
+
+		}
+
+		private static byte[] ToCommitment(Money amount)
+		{
+			if(amount == null)
+				return null;
+			var ms = new MemoryStream();
+			var stream = new BitcoinStream(ms, true);
+			ms.WriteByte(_Def.ExplicitSize);
+			stream.BigEndianScope();
+			long m = amount.Satoshi;
+			stream.ReadWrite(ref m);
+			return ms.ToArrayEfficient();
+		}
+
+		public Money Amount
+		{
+			get
+			{
+				if(!IsExplicit)
+					return null;
+				var stream = new BitcoinStream(Commitment);
+				stream.BigEndianScope();
+				stream.Inner.ReadByte();
+				long m = 0;
+				stream.ReadWrite(ref m);
+				return Money.Satoshis(m);
+			}
+		}
+	}
+
+	public abstract class ConfidentialCommitment : IBitcoinSerializable
+	{
+		protected class Def
+		{
+			public byte ExplicitSize;
+			public byte PrefixA;
+			public byte PrefixB;
+		}
+
+		public ConfidentialCommitment()
+		{
+
+		}
+		public ConfidentialCommitment(byte[] commitment)
+		{
+			_Commitment = commitment ?? _Empty;
+		}
+
+		protected abstract Def GetDef();
+
+		static byte[] _Empty = new byte[0];
+		byte[] _Commitment = _Empty;
+		public byte[] Commitment
+		{
+			get
+			{
+				return _Commitment;
+			}
+			private set
+			{
+				_Commitment = value;
+			}
+		}
+
+		public bool IsNull()
+		{
+			return _Commitment.Length == 0;
+		}
+
+		const int nCommittedSize = 33;
+		public void ReadWrite(BitcoinStream stream)
+		{
+			byte version = _Commitment.Length == 0 ? (byte)0 : _Commitment[0];
+			stream.ReadWrite(ref version);
+			if(!stream.Serializing)
+			{
+				var def = GetDef();
+				switch(version)
+				{
+					/* Null */
+					case 0:
+						_Commitment = _Empty;
+						return;
+					/* Explicit value */
+					case 1:
+					/* Trust-me! asset generation */
+					case 0xff:
+						_Commitment = new byte[def.ExplicitSize];
+						break;
+
+					default:
+						/* Confidential commitment */
+						if(version == def.PrefixA || version == def.PrefixB)
+						{
+							_Commitment = new byte[nCommittedSize];
+							break;
+						}
+						else
+						{
+							/* Invalid serialization! */
+							throw new FormatException("Unrecognized serialization prefix");
+						}
+				}
+				_Commitment[0] = version;
+			}
+
+			if(_Commitment.Length > 1)
+			{
+				stream.ReadWrite(ref _Commitment, 1, _Commitment.Length - 1);
+			}
+		}
+
+		public bool IsExplicit
+		{
+			get
+			{
+				return _Commitment.Length == GetDef().ExplicitSize && _Commitment[0] == 1;
+			}
+		}
+	}
+
+	public class AssetIssuance : IBitcoinSerializable
+	{
+
+		uint256 _BlindingNonce = uint256.Zero;
+		public uint256 BlindingNonce
+		{
+			get
+			{
+				return _BlindingNonce;
+			}
+			set
+			{
+				_BlindingNonce = value;
+			}
+		}
+
+
+		uint256 _Entropy = uint256.Zero;
+		public uint256 Entropy
+		{
+			get
+			{
+				return _Entropy;
+			}
+			set
+			{
+				_Entropy = value;
+			}
+		}
+
+
+		ConfidentialValue _Amount = new ConfidentialValue(0);
+		public ConfidentialValue ConfidentialAmount
+		{
+			get
+			{
+				return _Amount;
+			}
+			set
+			{
+				_Amount = value;
+			}
+		}
+
+
+		ConfidentialValue _InflationKeys = new ConfidentialValue(0);
+		public ConfidentialValue InflationKeys
+		{
+			get
+			{
+				return _InflationKeys;
+			}
+			set
+			{
+				_InflationKeys = value;
+			}
+		}
+
+		public Money Amount
+		{
+			get
+			{
+				return _Amount.Amount;
+			}
+		}
+
+		public bool IsNull()
+		{
+			return _InflationKeys.IsNull() && _Amount.IsNull();
+		}
+
+		public void ReadWrite(BitcoinStream stream)
+		{
+			stream.ReadWrite(ref _BlindingNonce);
+			stream.ReadWrite(ref _Entropy);
+			stream.ReadWrite(ref _Amount);
+			stream.ReadWrite(ref _InflationKeys);
+		}
+	}
+
 
 	public class TxIn : IBitcoinSerializable
 	{
@@ -244,13 +473,74 @@ namespace NBitcoin
 			}
 		}
 
+
+		AssetIssuance _AssetIssuance = new AssetIssuance();
+		public AssetIssuance AssetIssuance
+		{
+			get
+			{
+				return _AssetIssuance;
+			}
+			set
+			{
+				_AssetIssuance = value;
+			}
+		}
+
 		#region IBitcoinSerializable Members
 
 		public void ReadWrite(BitcoinStream stream)
 		{
-			stream.ReadWrite(ref prevout);
+			bool fHasAssetIssuance = false;
+			OutPoint outpoint = null;
+
+			if(stream.Serializing)
+			{
+				if(PrevOut.IsNull)
+				{
+					fHasAssetIssuance = false;
+					outpoint = prevout.Clone();
+				}
+				else
+				{
+					if((prevout.N & ~OutPoint.OUTPOINT_INDEX_MASK) != 0)
+						throw new FormatException("Prevout.N should not have OUTPOINT_INDEX_MASK");
+					fHasAssetIssuance = !_AssetIssuance.IsNull();
+					outpoint = prevout.Clone();
+					outpoint.N = prevout.N & OutPoint.OUTPOINT_INDEX_MASK;
+					if(fHasAssetIssuance)
+					{
+						outpoint.N |= OutPoint.OUTPOINT_ISSUANCE_FLAG;
+					}
+				}
+			}
+
+			stream.ReadWrite(ref outpoint);
+
+			if(!stream.Serializing)
+			{
+				if(outpoint.IsNull)
+				{
+					fHasAssetIssuance = false;
+					prevout = outpoint;
+				}
+				else
+				{
+					fHasAssetIssuance = (outpoint.N & OutPoint.OUTPOINT_ISSUANCE_FLAG) != 0;
+					prevout.Hash = outpoint.Hash;
+					prevout.N = outpoint.N & OutPoint.OUTPOINT_INDEX_MASK;
+				}
+			}
+
 			stream.ReadWrite(ref scriptSig);
 			stream.ReadWrite(ref nSequence);
+
+			if(fHasAssetIssuance)
+			{
+				stream.ReadWrite(ref _AssetIssuance);
+			}
+			else if(!stream.Serializing)
+				_AssetIssuance = new AssetIssuance();
 		}
 
 		#endregion
@@ -267,6 +557,17 @@ namespace NBitcoin
 			{
 				return (nSequence == uint.MaxValue);
 			}
+		}
+
+		public byte[] IssuanceAmountRangeProof
+		{
+			get;
+			set;
+		}
+
+		public byte[] InflationKeysRangeProof
+		{
+			get; set;
 		}
 
 		public TxIn Clone()
@@ -536,6 +837,49 @@ namespace NBitcoin
 		#endregion
 	}
 
+	public class ConfidentialNonce : ConfidentialCommitment
+	{
+		static Def _Def = new Def() { ExplicitSize = 33, PrefixA = 2, PrefixB = 3 };
+		protected override Def GetDef()
+		{
+			return _Def;
+		}
+	}
+
+	public class ConfidentialAsset : ConfidentialCommitment
+	{
+		static Def _Def = new Def() { ExplicitSize = 33, PrefixA = 10, PrefixB = 11 };
+		protected override Def GetDef()
+		{
+			return _Def;
+		}
+
+		private static byte[] ToCommitment(uint256 id)
+		{
+			if(id == null)
+				return null;
+			var ms = new MemoryStream();
+			var stream = new BitcoinStream(ms, true);
+			ms.WriteByte(_Def.ExplicitSize);
+			stream.ReadWrite(ref id);
+			return ms.ToArrayEfficient();
+		}
+
+		public uint256 AssetId
+		{
+			get
+			{
+				if(!IsExplicit)
+					return null;
+				var stream = new BitcoinStream(Commitment);
+				stream.Inner.ReadByte();
+				uint256 m = 0;
+				stream.ReadWrite(ref m);
+				return m;
+			}
+		}
+	}
+
 	public class TxOut : IBitcoinSerializable, IDestination
 	{
 		Script publicKey = Script.Empty;
@@ -569,22 +913,71 @@ namespace NBitcoin
 			ScriptPubKey = scriptPubKey;
 		}
 
-		readonly static Money NullMoney = new Money(-1);
-		Money _Value = NullMoney;
 		public Money Value
 		{
 			get
 			{
-				return _Value;
+				return _ConfidentialValue.Amount;
 			}
 			set
 			{
-				if(value == null)
-					throw new ArgumentNullException("value");
-				_Value = value;
+				_ConfidentialValue = new ConfidentialValue(value);
 			}
 		}
 
+
+
+		ConfidentialValue _ConfidentialValue = new ConfidentialValue();
+		public ConfidentialValue ConfidentialValue
+		{
+			get
+			{
+				return _ConfidentialValue;
+			}
+			set
+			{
+				_ConfidentialValue = value;
+			}
+		}
+
+
+		ConfidentialNonce _Nonce = new ConfidentialNonce();
+		public ConfidentialNonce Nonce
+		{
+			get
+			{
+				return _Nonce;
+			}
+			set
+			{
+				_Nonce = value;
+			}
+		}
+
+
+		ConfidentialAsset _Asset;
+		public ConfidentialAsset Asset
+		{
+			get
+			{
+				return _Asset;
+			}
+			set
+			{
+				_Asset = value;
+			}
+		}
+
+		public byte[] SurjectionProof
+		{
+			get;
+			set;
+		}
+		public byte[] RangeProof
+		{
+			get;
+			set;
+		}
 
 		public bool IsDust(FeeRate minRelayTxFee)
 		{
@@ -603,10 +996,9 @@ namespace NBitcoin
 
 		public void ReadWrite(BitcoinStream stream)
 		{
-			long value = Value.Satoshi;
-			stream.ReadWrite(ref value);
-			if(!stream.Serializing)
-				_Value = new Money(value);
+			stream.ReadWrite(ref _Asset);
+			stream.ReadWrite(ref _ConfidentialValue);
+			stream.ReadWrite(ref _Nonce);
 			stream.ReadWrite(ref publicKey);
 		}
 
@@ -1067,14 +1459,17 @@ namespace NBitcoin
 	class Witness
 	{
 		TxInList _Inputs;
-		public Witness(TxInList inputs)
+		TxOutList _Outputs;
+		public Witness(TxInList inputs, TxOutList outputs)
 		{
 			_Inputs = inputs;
+			_Outputs = outputs;
 		}
 
 		internal bool IsNull()
 		{
-			return _Inputs.All(i => i.WitScript.PushCount == 0);
+			return _Inputs.All(i => i.WitScript.PushCount == 0 && i.IssuanceAmountRangeProof == null && i.InflationKeysRangeProof == null)
+			&& _Outputs.All(i => i.SurjectionProof == null && i.RangeProof == null);
 		}
 
 		internal void ReadWrite(BitcoinStream stream)
@@ -1083,12 +1478,50 @@ namespace NBitcoin
 			{
 				if(stream.Serializing)
 				{
-					var bytes = (_Inputs[i].WitScript ?? WitScript.Empty).ToBytes();
+					var bytes = _Inputs[i].IssuanceAmountRangeProof;
+					stream.ReadWriteAsVarString(ref bytes);
+
+
+					bytes = _Inputs[i].InflationKeysRangeProof;
+					stream.ReadWriteAsVarString(ref bytes);
+
+					bytes = (_Inputs[i].WitScript ?? WitScript.Empty).ToBytes();
 					stream.ReadWrite(ref bytes);
 				}
 				else
 				{
+					byte[] bytes = null;
+					stream.ReadWriteAsVarString(ref bytes);
+					_Inputs[i].IssuanceAmountRangeProof = bytes;
+
+					bytes = null;
+					stream.ReadWriteAsVarString(ref bytes);
+					_Inputs[i].InflationKeysRangeProof = bytes;
+
 					_Inputs[i].WitScript = WitScript.Load(stream);
+				}
+			}
+
+			for(int i = 0; i < _Outputs.Count; i++)
+			{
+				if(stream.Serializing)
+				{
+					var bytes = _Outputs[i].SurjectionProof;
+					stream.ReadWriteAsVarString(ref bytes);
+
+					bytes = _Outputs[i].RangeProof;
+					stream.ReadWriteAsVarString(ref bytes);
+					
+				}
+				else
+				{
+					byte[] bytes = null;
+					stream.ReadWriteAsVarString(ref bytes);
+					_Outputs[i].SurjectionProof = bytes;
+
+					bytes = null;
+					stream.ReadWriteAsVarString(ref bytes);
+					_Outputs[i].RangeProof = bytes;
 				}
 			}
 
@@ -1229,7 +1662,7 @@ namespace NBitcoin
 				{
 					/* The witness flag is present, and we support witnesses. */
 					flags ^= 1;
-					Witness wit = new Witness(Inputs);
+					Witness wit = new Witness(Inputs, Outputs);
 					wit.ReadWrite(stream);
 				}
 				if(flags != 0)
@@ -1264,7 +1697,7 @@ namespace NBitcoin
 				vout.Transaction = this;
 				if((flags & 1) != 0)
 				{
-					Witness wit = new Witness(this.Inputs);
+					Witness wit = new Witness(this.Inputs, this.Outputs);
 					wit.ReadWrite(stream);
 				}
 			}
@@ -1779,7 +2212,8 @@ namespace NBitcoin
 		{
 			get
 			{
-				return Inputs.Any(i => i.WitScript != WitScript.Empty && i.WitScript != null);
+				return Inputs.Any(i => i.WitScript != WitScript.Empty && i.WitScript != null || i.IssuanceAmountRangeProof != null || i.InflationKeysRangeProof != null) ||
+					  Outputs.Any(o => o.SurjectionProof != null || o.RangeProof != null);
 			}
 		}
 
