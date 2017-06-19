@@ -62,20 +62,7 @@ namespace NBitcoin.Tests
 		private static string EnsureDownloaded(string version)
 		{
 			//is a file
-			if(version.Length >= 2 && version[1] == ':')
-			{
-				return version;
-			}
-
-			var bitcoind = String.Format("bitcoin-{0}/bin/bitcoind.exe", version);
-			if(File.Exists(bitcoind))
-				return bitcoind;
-			var zip = String.Format("bitcoin-{0}-win32.zip", version);
-			string url = String.Format("https://bitcoin.org/bin/bitcoin-core-{0}/" + zip, version);
-			WebClient client = new WebClient();
-			client.DownloadFile(url, zip);
-			ZipFile.ExtractToDirectory(zip, new FileInfo(zip).Directory.FullName);
-			return bitcoind;
+			return @"E:\Sources\elements-docker\elements-next\src\elementsd.exe";
 		}
 
 		int last = 0;
