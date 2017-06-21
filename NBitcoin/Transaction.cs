@@ -202,7 +202,7 @@ namespace NBitcoin
 				return null;
 			var ms = new MemoryStream();
 			var stream = new BitcoinStream(ms, true);
-			ms.WriteByte(_Def.ExplicitSize);
+			ms.WriteByte(1);
 			stream.BigEndianScope();
 			long m = amount.Satoshi;
 			stream.ReadWrite(ref m);
@@ -257,12 +257,7 @@ namespace NBitcoin
 			{
 				_Commitment = value;
 			}
-		}
-
-		public bool IsNull()
-		{
-			return _Commitment.Length == 0;
-		}
+		}		
 
 		const int nCommittedSize = 33;
 		public void ReadWrite(BitcoinStream stream)
@@ -380,12 +375,7 @@ namespace NBitcoin
 			{
 				return _Amount.Amount;
 			}
-		}
-
-		public bool IsNull()
-		{
-			return _InflationKeys.IsNull() && _Amount.IsNull();
-		}
+		}		
 
 		public void ReadWrite(BitcoinStream stream)
 		{
@@ -505,7 +495,7 @@ namespace NBitcoin
 				{
 					if((prevout.N & ~OutPoint.OUTPOINT_INDEX_MASK) != 0)
 						throw new FormatException("Prevout.N should not have OUTPOINT_INDEX_MASK");
-					fHasAssetIssuance = !_AssetIssuance.IsNull();
+					fHasAssetIssuance = _AssetIssuance != null;
 					outpoint = prevout.Clone();
 					outpoint.N = prevout.N & OutPoint.OUTPOINT_INDEX_MASK;
 					if(fHasAssetIssuance)
@@ -540,7 +530,7 @@ namespace NBitcoin
 				stream.ReadWrite(ref _AssetIssuance);
 			}
 			else if(!stream.Serializing)
-				_AssetIssuance = new AssetIssuance();
+				_AssetIssuance = null;
 		}
 
 		#endregion
@@ -854,13 +844,33 @@ namespace NBitcoin
 			return _Def;
 		}
 
+		static uint256 _BTC = new uint256("09f663de96be771f50cab5ded00256ffe63773e2eaa9a604092951cc3d7c6621");
+		public ConfidentialAsset():base(ToCommitment(_BTC))
+		{
+
+		}
+
+		public bool? IsBTC
+		{
+			get
+			{
+				if(!IsExplicit)
+					return null;
+				return AssetId == _BTC;
+			}
+		}
+		public ConfidentialAsset(uint256 id) : base(ToCommitment(id))
+		{
+
+		}
+
 		private static byte[] ToCommitment(uint256 id)
 		{
 			if(id == null)
 				return null;
 			var ms = new MemoryStream();
 			var stream = new BitcoinStream(ms, true);
-			ms.WriteByte(_Def.ExplicitSize);
+			ms.WriteByte(1);
 			stream.ReadWrite(ref id);
 			return ms.ToArrayEfficient();
 		}
@@ -898,6 +908,14 @@ namespace NBitcoin
 		public TxOut()
 		{
 
+		}
+
+		public bool IsFee
+		{
+			get
+			{
+				return publicKey == Script.Empty && _ConfidentialValue.IsExplicit && _Asset.IsExplicit;
+			}
 		}
 
 		public TxOut(Money value, IDestination destination)
@@ -955,7 +973,7 @@ namespace NBitcoin
 		}
 
 
-		ConfidentialAsset _Asset;
+		ConfidentialAsset _Asset = new ConfidentialAsset();
 		public ConfidentialAsset Asset
 		{
 			get
@@ -1581,7 +1599,17 @@ namespace NBitcoin
 		{
 			get
 			{
-				return Outputs.Sum(v => v.Value);
+				if(Outputs.Any(o => o == null))
+					return null;
+				return Outputs.Where(o => !o.IsFee).Sum(v => v.Value);
+			}
+		}
+
+		public Money Fee
+		{
+			get
+			{
+				return (Money)Outputs.Where(o => o.IsFee).Select(o => o.Value).Sum(Money.Zero);
 			}
 		}
 
@@ -2026,19 +2054,7 @@ namespace NBitcoin
 		/// <returns>Fee or null if some spent coins are missing or if spentCoins is null</returns>
 		public Money GetFee(ICoin[] spentCoins)
 		{
-			if(IsCoinBase)
-				return Money.Zero;
-			spentCoins = spentCoins ?? new ICoin[0];
-
-			Money fees = -TotalOut;
-			foreach(var input in this.Inputs)
-			{
-				var coin = spentCoins.FirstOrDefault(s => s.Outpoint == input.PrevOut);
-				if(coin == null)
-					return null;
-				fees += coin.TxOut.Value;
-			}
-			return fees;
+			return Fee;
 		}
 
 		/// <summary>
