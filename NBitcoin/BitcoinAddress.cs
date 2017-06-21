@@ -71,6 +71,11 @@ namespace NBitcoin
 		{
 			return PayToScriptHashTemplate.Instance.GenerateScriptPubKey((ScriptId)Hash);
 		}
+
+		protected override BitcoinBlindedAddress CreateBlindedAddressCore(PubKey blinding)
+		{
+			return new BitcoinBlindedAddress(blinding, Hash, Network);
+		}
 	}
 
 	/// <summary>
@@ -116,6 +121,18 @@ namespace NBitcoin
 				return _ScriptPubKey;
 			}
 		}
+
+		public BitcoinBlindedAddress AddBlindingKey(PubKey blinding)
+		{
+			if(this.Type == Base58Type.BLINDED_ADDRESS)
+				if(blinding == ((BitcoinBlindedAddress)this).BlindingKey)
+					return (BitcoinBlindedAddress)this;
+			else
+				throw new InvalidOperationException("Address already blinded");
+			return CreateBlindedAddressCore(blinding);
+		}
+
+		protected abstract BitcoinBlindedAddress CreateBlindedAddressCore(PubKey blinding);
 
 		protected abstract Script GeneratePaymentScript();
 

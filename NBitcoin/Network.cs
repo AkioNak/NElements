@@ -61,6 +61,7 @@ namespace NBitcoin
 	{
 		PUBKEY_ADDRESS,
 		SCRIPT_ADDRESS,
+		BLINDED_ADDRESS,
 		SECRET_KEY,
 		EXT_PUBLIC_KEY,
 		EXT_SECRET_KEY,
@@ -70,7 +71,7 @@ namespace NBitcoin
 		CONFIRMATION_CODE,
 		STEALTH_ADDRESS,
 		ASSET_ID,
-		COLORED_ADDRESS,
+		COLORED_ADDRESS,				
 		MAX_BASE58_TYPES,
 	};
 
@@ -82,7 +83,7 @@ namespace NBitcoin
 
 	public partial class Network
 	{
-		internal byte[][] base58Prefixes = new byte[12][];
+		internal byte[][] base58Prefixes = new byte[13][];
 		internal Bech32Encoder[] bech32Encoders = new Bech32Encoder[2];
 		public Bech32Encoder GetBech32Encoder(Bech32Type type, bool throws)
 		{
@@ -626,13 +627,13 @@ namespace NBitcoin
 
 		static Network()
 		{
-			_Main = new Network();
-			_Main.InitMain();
-			_Main.Consensus.Freeze();
+			//_Main = new Network();
+			//_Main.InitMain();
+			//_Main.Consensus.Freeze();
 
-			_TestNet = new Network();
-			_TestNet.InitTest();
-			_TestNet.Consensus.Freeze();
+			//_TestNet = new Network();
+			//_TestNet.InitTest();
+			//_TestNet.Consensus.Freeze();
 
 			_RegTest = new Network();
 			_RegTest.InitReg();
@@ -888,19 +889,19 @@ namespace NBitcoin
 			consensus.BIP9Deployments[BIP9Deployments.CSV] = new BIP9DeploymentsParameters(0, 0, 999999999);
 			consensus.BIP9Deployments[BIP9Deployments.Segwit] = new BIP9DeploymentsParameters(1, 0, 999999999);
 
-			genesis = CreateGenesisBlock(1296688602, 2, 0x207fffff, 1, Money.Coins(50m));
+			genesis = _RegTestBlock;
 			consensus.HashGenesisBlock = genesis.GetHash();
-			nDefaultPort = 18444;
-			nRPCPort = 18332;
+			nDefaultPort = 7042;
+			nRPCPort = 7041;
 			//strDataDir = "regtest";
-			assert(consensus.HashGenesisBlock == uint256.Parse("0x0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"));
+			assert(consensus.HashGenesisBlock == uint256.Parse("92a066f2390d9570f06072767fa01612147aa072cd8cdb863d677035f775abf2"));
 
 #if !NOSOCKET
 			vSeeds.Clear();  // Regtest mode doesn't have any DNS seeds.
 #endif
-			base58Prefixes = Network.TestNet.base58Prefixes.ToArray();
-			base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { (111) };
-			base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { (196) };
+			base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { (235) };
+			base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { (40) };
+			base58Prefixes[(int)Base58Type.BLINDED_ADDRESS] = new byte[] { (4) };
 			base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (239) };
 			base58Prefixes[(int)Base58Type.EXT_PUBLIC_KEY] = new byte[] { (0x04), (0x35), (0x87), (0xCF) };
 			base58Prefixes[(int)Base58Type.EXT_SECRET_KEY] = new byte[] { (0x04), (0x35), (0x83), (0x94) };
@@ -938,8 +939,8 @@ namespace NBitcoin
 			});
 			Block genesis = new Block();
 			genesis.Header.BlockTime = Utils.UnixTimeToDateTime(nTime);
-			genesis.Header.Bits = nBits;
-			genesis.Header.Nonce = nNonce;
+			genesis.Header.Height = 0;
+			//genesis.Header.Nonce = nNonce;
 			genesis.Header.Version = nVersion;
 			genesis.Transactions.Add(txNew);
 			genesis.Header.HashPrevBlock = uint256.Zero;
@@ -1167,19 +1168,10 @@ namespace NBitcoin
 				return CreateAssetId(base58);
 			if(type == Base58Type.COLORED_ADDRESS)
 				return CreateColoredAddress(base58);
+			if(type == Base58Type.BLINDED_ADDRESS)
+				return new BitcoinBlindedAddress(base58, this);
 			throw new NotSupportedException("Invalid Base58Data type : " + type.ToString());
 		}
-
-		//private BitcoinWitScriptAddress CreateWitScriptAddress(string base58)
-		//{
-		//	return new BitcoinWitScriptAddress(base58, this);
-		//}
-
-		//private BitcoinWitPubKeyAddress CreateWitPubKeyAddress(string base58)
-		//{
-		//	return new BitcoinWitPubKeyAddress(base58, this);
-		//}
-
 		private BitcoinColoredAddress CreateColoredAddress(string base58)
 		{
 			return new BitcoinColoredAddress(base58, this);
@@ -1259,8 +1251,10 @@ namespace NBitcoin
 
 		public static IEnumerable<Network> GetNetworks()
 		{
-			yield return Main;
-			yield return TestNet;
+			if(Main != null)
+				yield return Main;
+			if(TestNet != null)
+				yield return TestNet;
 			yield return RegTest;
 
 			if(_OtherNetworks.Count != 0)
@@ -1365,6 +1359,7 @@ namespace NBitcoin
 		}
 #endif
 		public byte[] _MagicBytes;
+
 		public byte[] MagicBytes
 		{
 			get

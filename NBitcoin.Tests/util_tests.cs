@@ -176,9 +176,7 @@ namespace NBitcoin.Tests
 
 			//Check http://blockchain.info/block-index/394713/0000000000000000729a4a7e084c90f932d038c407a6535a51dfecdfba1c8906
 			Assert.True(uint256.Parse("0x0000000000000000729a4a7e084c90f932d038c407a6535a51dfecdfba1c8906 ") < new Target(419470732).ToUInt256());
-
-			var genesis = Network.Main.GetGenesis();
-			Assert.True(genesis.GetHash() < genesis.Header.Bits.ToUInt256());
+			
 			Assert.True(Target.Difficulty1 == Target.Difficulty1);
 		}
 
@@ -612,7 +610,7 @@ namespace NBitcoin.Tests
 		{
 			BitcoinAddress addr = new BitcoinPubKeyAddress("17VZNX1SN5NtKa8UQFxwQbFeFc3iqRYhem");
 			Assert.Equal(addr.Network, Network.Main);
-		}
+		}		
 
 		public class DummyClass
 		{

@@ -840,7 +840,7 @@ namespace NBitcoin
 		{
 			return (BitcoinScriptAddress)Hash.GetAddress(network);
 		}
-
+		
 		public bool IsPayToScriptHash
 		{
 			get
