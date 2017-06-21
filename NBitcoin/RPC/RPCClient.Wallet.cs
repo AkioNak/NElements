@@ -235,7 +235,7 @@ namespace NBitcoin.RPC
 			{
 				Transaction = new Transaction(r["hex"].Value<string>()),
 				Fee = Money.Coins(r["fee"].Value<decimal>()),
-				ChangePos = r["changepos"].Value<int>()
+				//ChangePos = r["changepos"].Value<int>()
 			};
 		}
 

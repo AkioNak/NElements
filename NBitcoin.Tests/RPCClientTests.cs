@@ -147,6 +147,7 @@ namespace NBitcoin.Tests
 				tx.Outputs.Add(new TxOut(Money.Coins(1), k));
 				var rpc = node.CreateRPCClient();
 				var result = rpc.FundRawTransaction(tx);
+
 				TestFundRawTransactionResult(tx, result);
 
 				result = rpc.FundRawTransaction(tx, new FundRawTransactionOptions());
@@ -171,8 +172,8 @@ namespace NBitcoin.Tests
 			Assert.Equal(tx.Version, result.Transaction.Version);
 			Assert.True(result.Transaction.Inputs.Count > 0);
 			Assert.True(result.Transaction.Outputs.Count > 1);
-			Assert.True(result.ChangePos != -1);
-			Assert.Equal(Money.Coins(50m) - result.Transaction.Outputs.Select(txout => txout.Value).Sum(), result.Fee);
+			//Assert.True(result.ChangePos != -1);
+			Assert.Equal(Money.Coins(210000m) - result.Transaction.TotalOut, result.Fee);
 		}
 
 		[Fact]
@@ -202,27 +203,7 @@ namespace NBitcoin.Tests
 
 				Assert.Equal(address.ToString(), secret.GetAddress().AddBlindingKey(address.BlindingKey).ToString());
 			}
-		}
-
-		[Fact]
-		public void CanDecodeAndEncodeRawTransaction()
-		{
-			var a = new Protocol.AddressManager().Select();
-			var tests = TestCase.read_json("data/tx_raw.json");
-			foreach(var test in tests)
-			{
-				var format = (RawFormat)Enum.Parse(typeof(RawFormat), (string)test[0], true);
-				var network = ((string)test[1]) == "Main" ? Network.Main : Network.TestNet;
-				var testData = ((JObject)test[2]).ToString();
-
-				Transaction raw = Transaction.Parse(testData, format, network);
-
-				AssertJsonEquals(raw.ToString(format, network), testData);
-
-				var raw3 = Transaction.Parse(raw.ToString(format, network), format);
-				Assert.Equal(raw.ToString(format, network), raw3.ToString(format, network));
-			}
-		}
+		}		
 
 		[Fact]
 		public void CanDecodeUnspentCoinWatchOnlyAddress()
@@ -231,7 +212,7 @@ namespace NBitcoin.Tests
 @"{
 	""txid"" : ""d54994ece1d11b19785c7248868696250ab195605b469632b7bd68130e880c9a"",
 	""vout"" : 1,
-	""address"" : ""mgnucj8nYqdrPFh2JfZSB1NmUThUGnmsqe"",
+	""address"" : ""2duuT3MN16w8evwFeALhiXbuVw7hDSYFwhw"",
 	""account"" : ""test label"",
 	""scriptPubKey"" : ""76a9140dfc8bafc8419853b34d5e072ad37d1a5159f58488ac"",
 	""amount"" : 0.00010000,
@@ -253,7 +234,7 @@ namespace NBitcoin.Tests
 @"{
 	""txid"" : ""d54994ece1d11b19785c7248868696250ab195605b469632b7bd68130e880c9a"",
 	""vout"" : 1,
-	""address"" : ""mgnucj8nYqdrPFh2JfZSB1NmUThUGnmsqe"",
+	""address"" : ""2duuT3MN16w8evwFeALhiXbuVw7hDSYFwhw"",
 	""account"" : ""test label"",
 	""scriptPubKey"" : ""76a9140dfc8bafc8419853b34d5e072ad37d1a5159f58488ac"",
 	""amount"" : 0.00010000,
@@ -273,7 +254,7 @@ namespace NBitcoin.Tests
 @"{
 	""txid"" : ""d54994ece1d11b19785c7248868696250ab195605b469632b7bd68130e880c9a"",
 	""vout"" : 1,
-	""address"" : ""mgnucj8nYqdrPFh2JfZSB1NmUThUGnmsqe"",
+	""address"" : ""2duuT3MN16w8evwFeALhiXbuVw7hDSYFwhw"",
 	""account"" : ""test label"",
 	""scriptPubKey"" : ""76a9140dfc8bafc8419853b34d5e072ad37d1a5159f58488ac"",
 	""redeemScript"" : ""522103310188e911026cf18c3ce274e0ebb5f95b007f230d8cb7d09879d96dbeab1aff210243930746e6ed6552e03359db521b088134652905bd2d1541fa9124303a41e95621029e03a901b85534ff1e92c43c74431f7ce72046060fcf7a95c37e148f78c7725553ae"",
@@ -286,20 +267,6 @@ namespace NBitcoin.Tests
 
 			Console.WriteLine("Redeem Script: {0}", unspentCoin.RedeemScript);
 			Assert.NotNull(unspentCoin.RedeemScript);
-		}
-
-		[Fact]
-		public void RawTransactionIsConformsToRPC()
-		{
-			using(var builder = NodeBuilder.Create())
-			{
-				var rpc = builder.CreateNode().CreateRPCClient();
-				builder.StartAll();
-				var tx = Network.TestNet.GetGenesis().Transactions[0];
-
-				var tx2 = rpc.DecodeRawTransaction(tx.ToBytes());
-				AssertJsonEquals(tx.ToString(RawFormat.Satoshi), tx2.ToString(RawFormat.Satoshi));
-			}
 		}
 
 #if !PORTABLE
