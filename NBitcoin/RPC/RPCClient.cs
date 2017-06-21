@@ -275,15 +275,15 @@ namespace NBitcoin.RPC
 			return SendCommand(commandName.ToString(), parameters);
 		}
 
-		public BitcoinAddress GetNewAddress()
+		public BitcoinBlindedAddress GetNewAddress()
 		{
-			return BitcoinAddress.Create(SendCommand(RPCOperations.getnewaddress).Result.ToString(), Network);
+			return new BitcoinBlindedAddress(SendCommand(RPCOperations.getnewaddress).Result.ToString(), Network);
 		}
 
-		public async Task<BitcoinAddress> GetNewAddressAsync()
+		public async Task<BitcoinBlindedAddress> GetNewAddressAsync()
 		{
 			var result = await SendCommandAsync(RPCOperations.getnewaddress).ConfigureAwait(false);
-			return BitcoinAddress.Create(result.Result.ToString(), Network);
+			return new BitcoinBlindedAddress(result.Result.ToString(), Network);
 		}
 
 		public Task<RPCResponse> SendCommandAsync(RPCOperations commandName, params object[] parameters)
@@ -619,35 +619,14 @@ namespace NBitcoin.RPC
 
 		public BlockHeader GetBlockHeader(uint256 blockHash)
 		{
-			var resp = SendCommand("getblockheader", blockHash.ToString());
-			return ParseBlockHeader(resp);
+			var resp = SendCommand("getblockheader", blockHash.ToString(), false);
+			return new BlockHeader(resp.ResultString);
 		}
 
 		public async Task<BlockHeader> GetBlockHeaderAsync(uint256 blockHash)
 		{
-			var resp = await SendCommandAsync("getblockheader", blockHash.ToString()).ConfigureAwait(false);
-			return ParseBlockHeader(resp);
-		}
-
-		private static BlockHeader ParseBlockHeader(RPCResponse resp)
-		{
-			var header = new BlockHeader();
-			header.Version = (int)resp.Result["version"];
-			header.Nonce = (uint)resp.Result["nonce"];
-			header.Bits = new Target(Encoders.Hex.DecodeData((string)resp.Result["bits"]));
-			if(resp.Result["previousblockhash"] != null)
-			{
-				header.HashPrevBlock = uint256.Parse((string)resp.Result["previousblockhash"]);
-			}
-			if(resp.Result["time"] != null)
-			{
-				header.BlockTime = Utils.UnixTimeToDateTime((uint)resp.Result["time"]);
-			}
-			if(resp.Result["merkleroot"] != null)
-			{
-				header.HashMerkleRoot = uint256.Parse((string)resp.Result["merkleroot"]);
-			}
-			return header;
+			var resp = await SendCommandAsync("getblockheader", blockHash.ToString(), false).ConfigureAwait(false);
+			return new BlockHeader(resp.ResultString);
 		}
 
 		public uint256 GetBlockHash(int height)

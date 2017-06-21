@@ -12,6 +12,49 @@ using System.Linq;
 
 namespace NBitcoin
 {
+
+	public class BlockProof : IBitcoinSerializable
+	{
+		public BlockProof()
+		{
+			Challenge = Script.Empty;
+			Solution = Script.Empty;
+		}
+
+		Script _Challenge;
+		public Script Challenge
+		{
+			get
+			{
+				return _Challenge;
+			}
+			set
+			{
+				_Challenge = value;
+			}
+		}
+
+
+		Script _Solution;
+		public Script Solution
+		{
+			get
+			{
+				return _Solution;
+			}
+			set
+			{
+				_Solution = value;
+			}
+		}
+		public void ReadWrite(BitcoinStream stream)
+		{
+			stream.ReadWrite(ref _Challenge);
+			if(stream.Type != SerializationType.Hash)
+				stream.ReadWrite(ref _Solution);
+		}
+	}
+
 	/// <summary>
 	/// Nodes collect new transactions into a block, hash them into a hash tree,
 	/// and scan through nonce values to make the block's hash satisfy proof-of-work
@@ -60,17 +103,18 @@ namespace NBitcoin
 		uint256 hashMerkleRoot;
 
 		uint nTime;
-		uint nBits;
 
-		public Target Bits
+
+		uint _nHeight;
+		public int Height
 		{
 			get
 			{
-				return nBits;
+				return checked((int)_nHeight);
 			}
 			set
 			{
-				nBits = value;
+				_nHeight = checked((uint)value);
 			}
 		}
 
@@ -88,19 +132,20 @@ namespace NBitcoin
 			}
 		}
 
-		uint nNonce;
 
-		public uint Nonce
+		BlockProof _Proof;
+		public BlockProof Proof
 		{
 			get
 			{
-				return nNonce;
+				return _Proof;
 			}
 			set
 			{
-				nNonce = value;
+				_Proof = value;
 			}
 		}
+
 		public uint256 HashMerkleRoot
 		{
 			get
@@ -125,18 +170,11 @@ namespace NBitcoin
 			hashPrevBlock = 0;
 			hashMerkleRoot = 0;
 			nTime = 0;
-			nBits = 0;
-			nNonce = 0;
+			_nHeight = 0;
+			_Proof = new BlockProof();
 		}
 
-		public bool IsNull
-		{
-			get
-			{
-				return (nBits == 0);
-			}
-		}
-#region IBitcoinSerializable Members
+		#region IBitcoinSerializable Members
 
 		public void ReadWrite(BitcoinStream stream)
 		{
@@ -144,11 +182,13 @@ namespace NBitcoin
 			stream.ReadWrite(ref hashPrevBlock);
 			stream.ReadWrite(ref hashMerkleRoot);
 			stream.ReadWrite(ref nTime);
-			stream.ReadWrite(ref nBits);
-			stream.ReadWrite(ref nNonce);
+			stream.ReadWrite(ref _nHeight);
+			if(_nHeight > Int32.MaxValue)
+				throw new FormatException("Block with height too high");
+			stream.ReadWrite(ref _Proof);
 		}
 
-#endregion
+		#endregion
 
 		public uint256 GetHash()
 		{
@@ -160,7 +200,7 @@ namespace NBitcoin
 			}
 			if(h != null)
 				return h;
-			h = Hashes.Hash256(this.ToBytes());
+			h = Hashes.Hash256(this.ToBytes(serializationType: SerializationType.Hash));
 			hashes = _Hashes;
 			if(hashes != null)
 			{
@@ -199,12 +239,8 @@ namespace NBitcoin
 		}
 		public bool CheckProofOfWork(Consensus consensus)
 		{
-			consensus = consensus ?? Consensus.Main;
-			var bits = Bits.ToBigInteger();
-			if(bits.CompareTo(BigInteger.Zero) <= 0 || bits.CompareTo(Pow256) >= 0)
-				return false;
-			// Check proof of work matches claimed amount
-			return consensus.GetPoWHash(this) <= Bits.ToUInt256();
+			//This need to check signature of blocks
+			return true;
 		}
 
 		public override string ToString()
@@ -246,10 +282,6 @@ namespace NBitcoin
 
 			if(nOldTime < nNewTime)
 				this.BlockTime = nNewTime;
-
-			// Updating time can change work required on testnet:
-			if(consensus.PowAllowMinDifficultyBlocks)
-				Bits = GetWorkRequired(consensus, prev);
 		}
 
 		/// <summary>
@@ -439,7 +471,7 @@ namespace NBitcoin
 			if(address == null)
 				throw new ArgumentNullException("address");
 			Block block = new Block();
-			block.Header.Nonce = RandomUtils.GetUInt32();
+			//block.Header.Nonce = RandomUtils.GetUInt32();
 			block.Header.HashPrevBlock = this.GetHash();
 			block.Header.BlockTime = now;
 			var tx = block.AddTransaction(new Transaction());
@@ -461,7 +493,7 @@ namespace NBitcoin
 		public Block CreateNextBlockWithCoinbase(PubKey pubkey, Money value, DateTimeOffset now)
 		{
 			Block block = new Block();
-			block.Header.Nonce = RandomUtils.GetUInt32();
+			//block.Header.Nonce = RandomUtils.GetUInt32();
 			block.Header.HashPrevBlock = this.GetHash();
 			block.Header.BlockTime = now;
 			var tx = block.AddTransaction(new Transaction());
@@ -483,9 +515,9 @@ namespace NBitcoin
 			var block = JObject.Parse(json);
 			var txs = (JArray)block["tx"];
 			Block blk = new Block();
-			blk.Header.Bits = new Target((uint)block["bits"]);
+			blk.Header.Height = (int)block["height"];
 			blk.Header.BlockTime = Utils.UnixTimeToDateTime((uint)block["time"]);
-			blk.Header.Nonce = (uint)block["nonce"];
+			//blk.Header.Nonce = (uint)block["nonce"];
 			blk.Header.Version = (int)block["ver"];
 			blk.Header.HashPrevBlock = uint256.Parse((string)block["prev_block"]);
 			blk.Header.HashMerkleRoot = uint256.Parse((string)block["mrkl_root"]);

@@ -131,7 +131,7 @@ namespace NBitcoin.Tests
 		private ChainedBlock AddBlock(ConcurrentChain chain)
 		{
 			BlockHeader header = new BlockHeader();
-			header.Nonce = RandomUtils.GetUInt32();
+			//header.Nonce = RandomUtils.GetUInt32();
 			header.HashPrevBlock = chain.Tip.HashBlock;
 			chain.SetTip(header);
 			return chain.GetBlock(header.GetHash());
@@ -207,25 +207,6 @@ namespace NBitcoin.Tests
 			Assert.Equal(expectedFork, fork);
 		}
 
-		[Fact]
-		[Trait("UnitTest", "UnitTest")]
-		public void CanCalculateDifficulty()
-		{
-			var main = new ConcurrentChain(LoadMainChain());
-			var histories = File.ReadAllText("data/targethistory.csv").Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-
-			foreach(var history in histories)
-			{
-				var height = int.Parse(history.Split(',')[0]);
-				var expectedTarget = new Target(new BigInteger(history.Split(',')[1], 10));
-
-				var block = main.GetBlock(height).Header;
-
-				Assert.Equal(expectedTarget, block.Bits);
-				var target = main.GetWorkRequired(Network.Main, height);
-				Assert.Equal(expectedTarget, target);
-			}
-		}
 
 		[Fact]
 		[Trait("UnitTest", "UnitTest")]
@@ -452,7 +433,7 @@ namespace NBitcoin.Tests
 			{
 				var block = TestUtils.CreateFakeBlock(new Transaction());
 				block.Header.HashPrevBlock = previous == null ? chain.Tip.HashBlock : previous.HashBlock;
-				block.Header.Nonce = nonce;
+				//block.Header.Nonce = nonce;
 				if(!chain.TrySetTip(block.Header, out last))
 					throw new InvalidOperationException("Previous not existing");
 			}

@@ -148,34 +148,7 @@ namespace NBitcoin.RPC
 		{
 			var response = await SendCommandAsync("dumpprivkey", address.ToString()).ConfigureAwait(false);
 			return Network.CreateFromBase58Data<BitcoinSecret>((string)response.Result);
-		}
-
-
-		// getaccountaddress
-
-		public BitcoinAddress GetAccountAddress(string account)
-		{
-			var response = SendCommand("getaccountaddress", account);
-			return Network.CreateFromBase58Data<BitcoinAddress>((string)response.Result);
-		}
-
-		public async Task<BitcoinAddress> GetAccountAddressAsync(string account)
-		{
-			var response = await SendCommandAsync("getaccountaddress", account).ConfigureAwait(false);
-			return Network.CreateFromBase58Data<BitcoinAddress>((string)response.Result);
-		}
-
-		public BitcoinSecret GetAccountSecret(string account)
-		{
-			var address = GetAccountAddress(account);
-			return DumpPrivKey(address);
-		}
-
-		public async Task<BitcoinSecret> GetAccountSecretAsync(string account)
-		{
-			var address = await GetAccountAddressAsync(account).ConfigureAwait(false);
-			return await DumpPrivKeyAsync(address).ConfigureAwait(false);
-		}
+		}			
 
 
 		// getaddressesbyaccount 

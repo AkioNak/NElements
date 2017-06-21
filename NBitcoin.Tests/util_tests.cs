@@ -125,9 +125,7 @@ namespace NBitcoin.Tests
 
 			//Check http://blockchain.info/block-index/394713/0000000000000000729a4a7e084c90f932d038c407a6535a51dfecdfba1c8906
 			Assert.True(uint256.Parse("0x0000000000000000729a4a7e084c90f932d038c407a6535a51dfecdfba1c8906 ") < new Target(419470732).ToUInt256());
-
-			var genesis = Network.Main.GetGenesis();
-			Assert.True(genesis.GetHash() < genesis.Header.Bits.ToUInt256());
+			
 			Assert.True(Target.Difficulty1 == Target.Difficulty1);
 		}
 
@@ -561,22 +559,7 @@ namespace NBitcoin.Tests
 		{
 			BitcoinAddress addr = new BitcoinPubKeyAddress("17VZNX1SN5NtKa8UQFxwQbFeFc3iqRYhem");
 			Assert.Equal(addr.Network, Network.Main);
-		}
-
-		[Fact]
-		[Trait("UnitTest", "UnitTest")]
-		public void CanUseSegwitAddress()
-		{
-			var address = (BitcoinWitPubKeyAddress)BitcoinAddress.Create("p2xtZoXeX5X8BP8JfFhQK2nD3emtjch7UeFm");
-			Assert.Equal("0014010966776006953d5567439e5e39f86a0d273bee", address.ScriptPubKey.ToHex());
-			Assert.Equal("0014010966776006953d5567439e5e39f86a0d273bee", address.Hash.ScriptPubKey.ToHex());
-			Assert.Equal("3R1ZpeYRXx5oFtJWNoUwLFoACixRQ7sDQa", address.GetScriptAddress().ToString());
-
-			//Example of the BIP
-			var pubkey = new PubKey("0450863AD64A87AE8A2FE83C1AF1A8403CB53F53E486D8511DAD8A04887E5B23522CD470243453A299FA9E77237716103ABC11A1DF38855ED6F2EE187E9C582BA6");
-			Assert.Equal(new Script("OP_0 010966776006953D5567439E5E39F86A0D273BEE"), pubkey.GetSegwitAddress(Network.Main).ScriptPubKey);
-			Assert.Equal("p2xtZoXeX5X8BP8JfFhQK2nD3emtjch7UeFm", pubkey.GetSegwitAddress(Network.Main).ToString());
-		}
+		}		
 
 		public class DummyClass
 		{
@@ -624,27 +607,8 @@ namespace NBitcoin.Tests
 		//https://en.bitcoin.it/wiki/List_of_address_prefixes
 		public void CanDetectBase58NetworkAndType()
 		{
-			new Key().PubKey.GetSegwitAddress(Network.TestNet);
 			var tests = new[]
 				{
-					new
-					{
-						Base58 = "T7nYdHtL34xLZ2S5KwqgySNNzGxovhszhtDM3wQRUEfUbUVvRZzTW",
-						ExpectedType = typeof(BitcoinWitScriptAddress),
-						Network = Network.TestNet
-					},
-					new
-					{
-						Base58 = "p2yCHe3JxDcT62fvAraCKHYoiiCLZsUzdbRQ",
-						ExpectedType = typeof(BitcoinWitPubKeyAddress),
-						Network = Network.Main
-					},
-					new
-					{
-						Base58 = "QWzJyQDz7iRTPkLFBg6XEeJFwbYESFC5KXxk",
-						ExpectedType = typeof(BitcoinWitPubKeyAddress),
-						Network = Network.TestNet
-					},
 					new
 					{
 						Base58 = "bWqaKUZETiECYgmJNbNZUoanBxnAzoVjCNx",

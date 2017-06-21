@@ -100,7 +100,7 @@ namespace NBitcoin.Tests
 				var rpc = builder.CreateNode().CreateRPCClient();
 				builder.StartAll();
 				var response = rpc.GetBlockHeader(0);
-				AssertEx.CollectionEquals(Network.RegTest.GetGenesis().Header.ToBytes(), response.ToBytes());
+					AssertEx.CollectionEquals(Network.RegTest.GetGenesis().Header.ToBytes(), response.ToBytes());
 
 				response = rpc.GetBlockHeader(0);
 				Assert.Equal(Network.RegTest.GenesisHash, response.GetHash());
@@ -117,8 +117,6 @@ namespace NBitcoin.Tests
 				node.Generate(101);
 				var rpc = node.CreateRPCClient();
 				Assert.Throws<NoEstimationException>(() => rpc.EstimateFeeRate(1));
-				Assert.Equal(Money.Coins(50m), rpc.GetBalance(1, false));
-				Assert.Equal(Money.Coins(50m), rpc.GetBalance());
 			}
 		}
 
@@ -191,20 +189,18 @@ namespace NBitcoin.Tests
 		}
 
 		[Fact]
-		public void CanGetPrivateKeysFromAccount()
+		public void CanGetPrivateKeys()
 		{
 			using(var builder = NodeBuilder.Create())
 			{
 				var rpc = builder.CreateNode().CreateRPCClient();
 				builder.StartAll();
 				Key key = new Key();
-				rpc.ImportAddress(key.PubKey.GetAddress(Network.RegTest), TestAccount, false);
-				BitcoinAddress address = rpc.GetAccountAddress(TestAccount);
+				rpc.ImportAddress(key.PubKey.GetAddress(Network.RegTest), "", false);
+				var address = rpc.GetNewAddress();
 				BitcoinSecret secret = rpc.DumpPrivKey(address);
-				BitcoinSecret secret2 = rpc.GetAccountSecret(TestAccount);
 
-				Assert.Equal(secret.ToString(), secret2.ToString());
-				Assert.Equal(address.ToString(), secret.GetAddress().ToString());
+				Assert.Equal(address.ToString(), secret.GetAddress().AddBlindingKey(address.BlindingKey).ToString());
 			}
 		}
 

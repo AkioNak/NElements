@@ -108,12 +108,12 @@ namespace NBitcoin.Tests
 			b.Header.BlockTime = DateTimeOffset.UtcNow;
 			b.UpdateMerkleRoot();
 			b.Header.HashPrevBlock = Chain.Tip.HashBlock;
-			b.Header.Bits = Chain.Tip.GetNextWorkRequired(Network);
+			b.Header.Height = Chain.Tip.Height + 1;
 			if(RealPoW)
 			{
 				while(true)
 				{
-					b.Header.Nonce = RandomUtils.GetUInt32();					
+					//b.Header.Nonce = RandomUtils.GetUInt32();					
 					var header = new ChainedBlock(b.Header, b.Header.GetHash(), Chain.GetBlock(b.Header.HashPrevBlock));
 					if(header.Validate(Network))
 						break;

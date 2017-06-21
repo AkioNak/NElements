@@ -58,5 +58,10 @@ namespace NBitcoin
 		{
 			return PayToPubkeyHashTemplate.Instance.GenerateScriptPubKey((KeyId)this.Hash);
 		}
+
+		protected override BitcoinBlindedAddress CreateBlindedAddressCore(PubKey blinding)
+		{
+			return new BitcoinBlindedAddress(blinding, Hash, Network);
+		}
 	}
 }

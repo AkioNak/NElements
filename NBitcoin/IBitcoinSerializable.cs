@@ -60,12 +60,13 @@ namespace NBitcoin
 			instance.FromBytes(serializable.ToBytes(version), version);
 			return instance;
 		}
-		public static byte[] ToBytes(this IBitcoinSerializable serializable, ProtocolVersion version = ProtocolVersion.PROTOCOL_VERSION)
+		public static byte[] ToBytes(this IBitcoinSerializable serializable, ProtocolVersion version = ProtocolVersion.PROTOCOL_VERSION, SerializationType serializationType = SerializationType.Disk)
 		{
 			MemoryStream ms = new MemoryStream();
 			serializable.ReadWrite(new BitcoinStream(ms, true)
 			{
-				ProtocolVersion = version
+				ProtocolVersion = version,
+				Type = serializationType
 			});
 			return ToArrayEfficient(ms);
 		}

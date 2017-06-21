@@ -162,13 +162,7 @@ namespace NBitcoin
 			var redeem = PayToPubkeyTemplate.Instance.GenerateScriptPubKey(this);
 			return new BitcoinScriptAddress(redeem.Hash, network);
 		}
-
-		public BitcoinWitPubKeyAddress GetSegwitAddress(Network network)
-		{
-			return new BitcoinWitPubKeyAddress(new WitKeyId(this.Hash), network);
-		}
-
-
+		
 		public bool Verify(uint256 hash, ECDSASignature sig)
 		{
 			return ECKey.Verify(hash, sig);
