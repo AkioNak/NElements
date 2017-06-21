@@ -100,14 +100,15 @@ namespace NBitcoin
 		static BigInteger Pow256 = BigInteger.ValueOf(2).Pow(256);
 		private BigInteger GetBlockProof()
 		{
-			var bnTarget = Header.Bits.ToBigInteger();
-			if(bnTarget.CompareTo(BigInteger.Zero) <= 0 || bnTarget.CompareTo(Pow256) >= 0)
-				return BigInteger.Zero;
-			// We need to compute 2**256 / (bnTarget+1), but we can't represent 2**256
-			// as it's too large for a arith_uint256. However, as 2**256 is at least as large
-			// as bnTarget+1, it is equal to ((2**256 - bnTarget - 1) / (bnTarget+1)) + 1,
-			// or ~bnTarget / (nTarget+1) + 1.
-			return ((Pow256.Subtract(bnTarget).Subtract(BigInteger.One)).Divide(bnTarget.Add(BigInteger.One))).Add(BigInteger.One);
+			return BigInteger.One;
+			//var bnTarget = Header.Bits.ToBigInteger();
+			//if(bnTarget.CompareTo(BigInteger.Zero) <= 0 || bnTarget.CompareTo(Pow256) >= 0)
+			//	return BigInteger.Zero;
+			//// We need to compute 2**256 / (bnTarget+1), but we can't represent 2**256
+			//// as it's too large for a arith_uint256. However, as 2**256 is at least as large
+			//// as bnTarget+1, it is equal to ((2**256 - bnTarget - 1) / (bnTarget+1)) + 1,
+			//// or ~bnTarget / (nTarget+1) + 1.
+			//return ((Pow256.Subtract(bnTarget).Subtract(BigInteger.One)).Divide(bnTarget.Add(BigInteger.One))).Add(BigInteger.One);
 		}
 
 		public ChainedBlock(BlockHeader header, int height)
@@ -241,72 +242,7 @@ namespace NBitcoin
 
 		public Target GetWorkRequired(Consensus consensus)
 		{
-			// Genesis block
-			if(Height == 0)
-				return consensus.PowLimit;
-			var nProofOfWorkLimit = consensus.PowLimit;
-			var pindexLast = this.Previous;
-			var height = Height;
-
-			if(pindexLast == null)
-				return nProofOfWorkLimit;
-
-			// Only change once per interval
-			if((height) % consensus.DifficultyAdjustmentInterval != 0)
-			{
-				if(consensus.PowAllowMinDifficultyBlocks)
-				{
-					// Special difficulty rule for testnet:
-					// If the new block's timestamp is more than 2* 10 minutes
-					// then allow mining of a min-difficulty block.
-					if(this.Header.BlockTime > pindexLast.Header.BlockTime + TimeSpan.FromTicks(consensus.PowTargetSpacing.Ticks * 2))
-						return nProofOfWorkLimit;
-					else
-					{
-						// Return the last non-special-min-difficulty-rules-block
-						ChainedBlock pindex = pindexLast;
-						while(pindex.Previous != null && (pindex.Height % consensus.DifficultyAdjustmentInterval) != 0 && pindex.Header.Bits == nProofOfWorkLimit)
-							pindex = pindex.Previous;
-						return pindex.Header.Bits;
-					}
-				}
-				return pindexLast.Header.Bits;
-			}
-
-			long pastHeight = 0;
-			if(consensus.LitecoinWorkCalculation)
-			{
-				long blockstogoback = consensus.DifficultyAdjustmentInterval - 1;
-				if((pindexLast.Height + 1) != consensus.DifficultyAdjustmentInterval)
-					blockstogoback = consensus.DifficultyAdjustmentInterval;
-				pastHeight = pindexLast.Height - blockstogoback;
-			}
-			else
-			{
-				// Go back by what we want to be 14 days worth of blocks
-				pastHeight = pindexLast.Height - (consensus.DifficultyAdjustmentInterval - 1);
-			}
-			ChainedBlock pindexFirst = this.EnumerateToGenesis().FirstOrDefault(o => o.Height == pastHeight);
-			assert(pindexFirst);
-			if(consensus.PowNoRetargeting)
-				return pindexLast.header.Bits;
-
-			// Limit adjustment step
-			var nActualTimespan = pindexLast.Header.BlockTime - pindexFirst.Header.BlockTime;
-			if(nActualTimespan < TimeSpan.FromTicks(consensus.PowTargetTimespan.Ticks / 4))
-				nActualTimespan = TimeSpan.FromTicks(consensus.PowTargetTimespan.Ticks / 4);
-			if(nActualTimespan > TimeSpan.FromTicks(consensus.PowTargetTimespan.Ticks * 4))
-				nActualTimespan = TimeSpan.FromTicks(consensus.PowTargetTimespan.Ticks * 4);
-
-			// Retarget
-			var bnNew = pindexLast.Header.Bits.ToBigInteger();
-			bnNew = bnNew.Multiply(BigInteger.ValueOf((long)nActualTimespan.TotalSeconds));
-			bnNew = bnNew.Divide(BigInteger.ValueOf((long)consensus.PowTargetTimespan.TotalSeconds));
-			var newTarget = new Target(bnNew);
-			if(newTarget > nProofOfWorkLimit)
-				newTarget = nProofOfWorkLimit;
-
-			return newTarget;
+			return Target.Difficulty1;
 		}
 
 
@@ -369,7 +305,7 @@ namespace NBitcoin
 
 		public bool CheckProofOfWorkAndTarget(Consensus consensus)
 		{
-			return Height == 0 || (Header.CheckProofOfWork(consensus) && Header.Bits == GetWorkRequired(consensus));
+			return Header.CheckProofOfWork(consensus);
 		}
 
 
