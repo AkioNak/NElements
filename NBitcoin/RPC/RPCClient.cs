@@ -258,10 +258,10 @@ namespace NBitcoin.RPC
 				bitcoinFolder = Path.Combine(home, ".bitcoin");
 			else
 				bitcoinFolder = Path.Combine(localAppData, "Bitcoin");
-			if(network == Network.TestNet)
-				bitcoinFolder = Path.Combine(bitcoinFolder, "testnet3");
+			if(network == Network.Main)
+				bitcoinFolder = Path.Combine(bitcoinFolder, "elements");
 			if(network == Network.RegTest)
-				bitcoinFolder = Path.Combine(bitcoinFolder, "regtest");
+				bitcoinFolder = Path.Combine(bitcoinFolder, "elementsregtest");
 			var cookiePath = Path.Combine(bitcoinFolder, ".cookie");
 			try
 			{
