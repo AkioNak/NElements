@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <VersionPrefix>1.0.0.0</VersionPrefix>
-    <TargetFrameworks>netstandard1.3;netstandard1.1</TargetFrameworks>
+    <TargetFrameworks>netstandard1.3</TargetFrameworks>
     <DefineConstants>$(DefineConstants);NETCORE;NOTRACESOURCE</DefineConstants>
     <NoWarn>$(NoWarn);1591;1573;1572;1584;1570;3021</NoWarn>
     <DebugType>portable</DebugType>
