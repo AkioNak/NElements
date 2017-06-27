@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NBitcoin.DataEncoders;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,59 +7,91 @@ using System.Threading.Tasks;
 
 namespace NBitcoin
 {
-	public class BitcoinBlindedAddress : BitcoinAddress
+	public class BitcoinBlindedAddress : BitcoinAddress, IBase58Data
 	{
 		public BitcoinBlindedAddress(string base58, Network expectedNetwork = null)
-			: base(base58, expectedNetwork)
+			: base(Validate(base58, ref expectedNetwork), expectedNetwork)
 		{
+			var data = Encoders.Base58Check.DecodeData(base58);
+
+			PubKey p = null;
+			TxDestination h = null;
+			Validate(base58, ref expectedNetwork, ref p, ref h);
+			_Hash = h;
+			_BlindingKey = p;
 		}
 
-		public BitcoinBlindedAddress(PubKey pubKey, TxDestination keyId, Network network)
-			: base(GetRawBytes(pubKey, keyId, network), network)
+		private static string Validate(string base58, ref Network expectedNetwork)
 		{
+			PubKey p = null;
+			TxDestination h = null;
+			return Validate(base58, ref expectedNetwork, ref p, ref h);
 		}
 
-		private static byte[] GetRawBytes(PubKey pubKey, TxDestination keyId, Network network)
+		private static string Validate(string base58, ref Network expectedNetwork, ref PubKey blinding, ref TxDestination hash)
 		{
-			if(network == null)
-				throw new ArgumentNullException("network");
-			return network.GetVersionBytes(keyId.GetAddress(network).Type).Concat(pubKey.ToBytes(), keyId.ToBytes());
+			if(base58 == null)
+				throw new ArgumentNullException("base58");
+			var networks = expectedNetwork == null ? Network.GetNetworks() : new[] { expectedNetwork };
+			var data = Encoders.Base58Check.DecodeData(base58);
+			foreach(var network in networks)
+			{
+				bool isP2SH = false;
+				var versionBytes = network.GetVersionBytes(Base58Type.BLINDED_ADDRESS, false);
+				if(versionBytes == null || !data.StartWith(versionBytes))
+					continue;
+				var innerData = data.Skip(versionBytes.Length).ToArray();
+				var versionBytes2 = network.GetVersionBytes(Base58Type.PUBKEY_ADDRESS, false);
+				if(!innerData.StartWith(versionBytes2))
+				{
+					versionBytes2 = network.GetVersionBytes(Base58Type.SCRIPT_ADDRESS, false);
+					if(!innerData.StartWith(versionBytes2))
+					{
+						continue;
+					}
+					isP2SH = true;
+				}
+
+				if(innerData.Length != versionBytes2.Length + 33 + 20)
+					continue;
+				try
+				{
+					blinding = new PubKey(innerData.SafeSubarray(versionBytes2.Length, 33));
+					var h = innerData.SafeSubarray(versionBytes2.Length + 33, 20);
+					hash = isP2SH ? (TxDestination)new ScriptId(h) : new KeyId(h);
+				}
+				catch(FormatException) { continue; }
+				expectedNetwork = network;
+				return base58;
+			}
+			throw new FormatException("Invalid BitcoinBlindedAddress");
 		}
 
-		public override Base58Type Type
+
+		public BitcoinBlindedAddress(PubKey blindingKey, TxDestination keyId, Network network)
+				: base(NotNull(keyId, nameof(keyId)) ?? 
+					   NotNull(blindingKey, nameof(blindingKey)) ?? 
+					   Network.CreateBase58(Base58Type.BLINDED_ADDRESS, 
+										network.GetVersionBytes(((IBase58Data)keyId.GetAddress(network)).Type, true)
+										.Concat(blindingKey.ToBytes())
+										.Concat(keyId.ToBytes()), network), network)
+		{
+			_BlindingKey = blindingKey;
+			_Hash = keyId;
+		}
+
+		private static string NotNull<T>(T o, string name) where T : class
+		{
+			if(o == null)
+				throw new ArgumentNullException(name);
+			return null;
+		}
+
+		public Base58Type Type
 		{
 			get
 			{
 				return Base58Type.BLINDED_ADDRESS;
-			}
-		}
-
-		protected override bool IsValid
-		{
-			get
-			{
-				if(_BlindingKey != null)
-					return true;
-
-				var version = Network.GetVersionBytes(Base58Type.PUBKEY_ADDRESS);
-				if(!StartWith(vchData, version))
-				{
-					version = Network.GetVersionBytes(Base58Type.SCRIPT_ADDRESS);
-					if(!StartWith(vchData, version))
-					{
-						return false;
-					}
-				}
-
-				if(vchData.Length != version.Length + 33 + 20)
-					return false;
-				var blinding = vchData.SafeSubarray(version.Length, 33);
-				if(PubKey.Check(blinding, true))
-				{
-					_BlindingKey = new PubKey(blinding);
-					_Hash = new KeyId(vchData.SafeSubarray(version.Length + 33, 20));
-				}
-				return _BlindingKey != null;
 			}
 		}
 

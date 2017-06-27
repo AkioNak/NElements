@@ -221,7 +221,7 @@ namespace NBitcoin.Tests
 	""spendable"" : false
 }";
 			var testData = JObject.Parse(testJson);
-			var unspentCoin = new UnspentCoin(testData, Network.TestNet);
+			var unspentCoin = new UnspentCoin(testData, Network.RegTest);
 
 			Assert.Equal("test label", unspentCoin.Account);
 			Assert.False(unspentCoin.IsSpendable);
@@ -242,7 +242,7 @@ namespace NBitcoin.Tests
 	""confirmations"" : 6210
 }";
 			var testData = JObject.Parse(testJson);
-			var unspentCoin = new UnspentCoin(testData, Network.TestNet);
+			var unspentCoin = new UnspentCoin(testData, Network.RegTest);
 
 			// Versions prior to 0.10.0 were always spendable (but had no JSON field)
 			Assert.True(unspentCoin.IsSpendable);
@@ -264,7 +264,7 @@ namespace NBitcoin.Tests
 	""spendable"" : true
 }";
 			var testData = JObject.Parse(testJson);
-			var unspentCoin = new UnspentCoin(testData, Network.TestNet);
+			var unspentCoin = new UnspentCoin(testData, Network.RegTest);
 
 			Console.WriteLine("Redeem Script: {0}", unspentCoin.RedeemScript);
 			Assert.NotNull(unspentCoin.RedeemScript);

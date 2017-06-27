@@ -71,6 +71,11 @@ namespace NBitcoin
 			return PayToWitTemplate.Instance.GenerateScriptPubKey(OpcodeType.OP_0, Hash._DestBytes);
 		}
 
+		protected override BitcoinBlindedAddress CreateBlindedAddressCore(PubKey blinding)
+		{
+			throw new NotImplementedException();
+		}
+
 		public Bech32Type Type
 		{
 			get
@@ -142,6 +147,11 @@ namespace NBitcoin
 		protected override Script GeneratePaymentScript()
 		{
 			return PayToWitTemplate.Instance.GenerateScriptPubKey(OpcodeType.OP_0, Hash._DestBytes);
+		}
+
+		protected override BitcoinBlindedAddress CreateBlindedAddressCore(PubKey blinding)
+		{
+			throw new NotImplementedException();
 		}
 
 		public Bech32Type Type
