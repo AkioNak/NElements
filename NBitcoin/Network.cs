@@ -71,7 +71,7 @@ namespace NBitcoin
 		CONFIRMATION_CODE,
 		STEALTH_ADDRESS,
 		ASSET_ID,
-		COLORED_ADDRESS,				
+		COLORED_ADDRESS,
 		MAX_BASE58_TYPES,
 	};
 
@@ -998,6 +998,21 @@ namespace NBitcoin
 			return null;
 		}
 
+		private IEnumerable<Base58Type> GetBase58Types(string base58)
+		{
+			var bytes = Encoders.Base58Check.DecodeData(base58);
+			for(int i = 0; i < base58Prefixes.Length; i++)
+			{
+				var prefix = base58Prefixes[i];
+				if(prefix == null)
+					continue;
+				if(bytes.Length < prefix.Length)
+					continue;
+				if(Utils.ArrayEqual(bytes, 0, prefix, 0, prefix.Length))
+					yield return (Base58Type)i;
+			}
+		}
+
 
 		internal static Network GetNetworkFromBase58Data(string base58, Base58Type? expectedType = null)
 		{
@@ -1113,10 +1128,9 @@ namespace NBitcoin
 				throw new ArgumentNullException("base58");
 			foreach(var network in networks)
 			{
-				var type = network.GetBase58Type(base58);
-				if(type.HasValue)
+				foreach(var type in network.GetBase58Types(base58))
 				{
-					if(type.Value == Base58Type.COLORED_ADDRESS)
+					if(type == Base58Type.COLORED_ADDRESS)
 					{
 						var wrapped = BitcoinColoredAddress.GetWrappedBase58(base58, network);
 						var wrappedType = network.GetBase58Type(wrapped);
@@ -1133,12 +1147,13 @@ namespace NBitcoin
 					IBase58Data data = null;
 					try
 					{
-						data = network.CreateBase58Data(type.Value, base58);
+						data = network.CreateBase58Data(type, base58);
 					}
 					catch(FormatException) { }
 					if(data != null)
 						yield return data;
 				}
+
 			}
 		}
 
