@@ -1124,19 +1124,6 @@ namespace NBitcoin.RPC
 			return SendCommand(RPCOperations.settxfee, new[] { feeRate.FeePerK.ToString() }).Result.ToString() == "true";
 		}
 
-		public async Task<uint256[]> GenerateAsync(int nBlocks)
-		{
-			if(nBlocks < 0)
-				throw new ArgumentOutOfRangeException("nBlocks");
-			var result = (JArray)(await SendCommandAsync(RPCOperations.generate, nBlocks).ConfigureAwait(false)).Result;
-			return result.Select(r => new uint256(r.Value<string>())).ToArray();
-		}
-
-		public uint256[] Generate(int nBlocks)
-		{
-			return GenerateAsync(nBlocks).GetAwaiter().GetResult();
-		}
-
 		public class IssueAssetResponse
 		{
 			[JsonProperty("txid")]

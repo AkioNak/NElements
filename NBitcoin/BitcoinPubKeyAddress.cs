@@ -40,8 +40,6 @@ namespace NBitcoin
 			throw new FormatException("Invalid BitcoinPubKeyAddress");
 		}
 
-		
-
 		public BitcoinPubKeyAddress(KeyId keyId, Network network) :
 			base(NotNull(keyId) ?? Network.CreateBase58(Base58Type.PUBKEY_ADDRESS, keyId.ToBytes(), network), network)
 		{

@@ -124,7 +124,10 @@ namespace NBitcoin
 
 		public BitcoinBlindedAddress AddBlindingKey(PubKey blinding)
 		{
-			if(this.Type == Base58Type.BLINDED_ADDRESS)
+			var b58 = this as IBase58Data;
+			if(b58 == null)
+				throw new InvalidOperationException("Can't blind a non base58 address");
+			if(b58.Type == Base58Type.BLINDED_ADDRESS)
 				if(blinding == ((BitcoinBlindedAddress)this).BlindingKey)
 					return (BitcoinBlindedAddress)this;
 			else
