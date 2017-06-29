@@ -199,7 +199,6 @@ namespace NBitcoin
 			if(!Serializing)
 				data = obj;
 		}
-
 		public void ReadWrite<T>(ref List<T> list) where T : IBitcoinSerializable, new()
 		{
 			ReadWriteList<List<T>, T>(ref list);
