@@ -50,7 +50,7 @@ namespace NBitcoin.Tests
 			var path = EnsureDownloaded(version);
 			try
 			{
-				Directory.Delete(caller, true);
+	Directory.Delete(caller, true);
 			}
 			catch(DirectoryNotFoundException)
 			{
@@ -277,7 +277,7 @@ namespace NBitcoin.Tests
 			}
 			else
 			{
-				_RPCAuth = "cookiefile=" + Path.Combine(dataDir, "regtest", ".cookie");
+				_RPCAuth = "cookiefile=" + Path.Combine(dataDir, "elementsregtest", ".cookie");
 			}
 			config.Add("port", ports[0].ToString());
 			config.Add("rpcport", ports[1].ToString());

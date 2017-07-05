@@ -203,7 +203,7 @@ namespace NBitcoin
 
 			using(HashStream hs = new HashStream())
 			{
-				this.ReadWrite(new BitcoinStream(hs, true));
+				this.ReadWrite(new BitcoinStream(hs, true) { Type = SerializationType.Hash });
 				h = hs.GetHash();
 			}
 
