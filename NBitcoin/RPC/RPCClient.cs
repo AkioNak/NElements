@@ -274,7 +274,7 @@ namespace NBitcoin.RPC
 			return null;
 #endif
 		}
-
+		
 		string _FromCookiePath;
 
 		public string Authentication
@@ -1181,17 +1181,28 @@ namespace NBitcoin.RPC
 			}
 		}
 
-		public IssueAssetResponse IssueAsset(int assetamount, int tokenamount, bool? blind = null)
+		public IssueAssetResponse IssueAsset(int assetamount, int tokenamount, bool? blind = null, string name = null)
 		{
-			return IssueAssetAsync(assetamount, tokenamount, blind).GetAwaiter().GetResult();
+			return IssueAssetAsync(assetamount, tokenamount, blind, name).GetAwaiter().GetResult();
 		}
-		public async Task<IssueAssetResponse> IssueAssetAsync(int assetamount, int tokenamount, bool? blind = null)
+		public async Task<IssueAssetResponse> IssueAssetAsync(int assetamount, int tokenamount, bool? blind = null, string name = null)
 		{
 			RPCResponse r = null;
 			if(blind.HasValue)
-				r = await SendCommandAsync("issueasset", assetamount, tokenamount, blind.Value).ConfigureAwait(false);
+			{
+				if(name == null)
+					r = await SendCommandAsync("issueasset", assetamount, tokenamount, blind.Value).ConfigureAwait(false);
+				else
+					r = await SendCommandAsync("issueasset", assetamount, tokenamount, blind.Value, name).ConfigureAwait(false);
+			}
 			else
-				r = await SendCommandAsync("issueasset", assetamount, tokenamount).ConfigureAwait(false);
+			{
+
+				if(name == null)
+					r = await SendCommandAsync("issueasset", assetamount, tokenamount).ConfigureAwait(false);
+				else
+					r = await SendCommandAsync("issueasset", assetamount, tokenamount, true, name).ConfigureAwait(false);
+			}
 
 			return Serializer.ToObject<IssueAssetResponse>(r.ResultString);
 		}
