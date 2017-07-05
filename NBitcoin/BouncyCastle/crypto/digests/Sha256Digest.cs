@@ -2,6 +2,7 @@ using System;
 
 using NBitcoin.BouncyCastle.Crypto.Utilities;
 using NBitcoin.BouncyCastle.Utilities;
+using System.IO;
 
 namespace NBitcoin.BouncyCastle.Crypto.Digests
 {
@@ -29,6 +30,28 @@ namespace NBitcoin.BouncyCastle.Crypto.Digests
 		public Sha256Digest()
 		{
 			initHs();
+		}
+
+
+		public byte[] MidState
+		{
+			get
+			{
+				MemoryStream ms = new MemoryStream();
+				BitcoinStream bs = new BitcoinStream(ms, true);
+				bs.BigEndianScope();
+
+				bs.ReadWrite(this.H1);
+				bs.ReadWrite(this.H2);
+				bs.ReadWrite(this.H3);
+				bs.ReadWrite(this.H4);
+				bs.ReadWrite(this.H5);
+				bs.ReadWrite(this.H6);
+				bs.ReadWrite(this.H7);
+				bs.ReadWrite(this.H8);
+
+				return ms.ToArrayEfficient();
+			}
 		}
 
 		/**

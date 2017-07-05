@@ -1,6 +1,7 @@
 using System;
 
 using NBitcoin.BouncyCastle.Utilities;
+using System.IO;
 
 namespace NBitcoin.BouncyCastle.Crypto.Digests
 {
