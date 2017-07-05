@@ -1767,7 +1767,7 @@ namespace NBitcoin
 			if(h != null)
 				return h;
 
-			using(HashStream hs = new HashStream())
+			using(var hs = new HashStream())
 			{
 				this.ReadWrite(new BitcoinStream(hs, true)
 				{
@@ -1816,7 +1816,7 @@ namespace NBitcoin
 			if(h != null)
 				return h;
 
-			using(HashStream hs = new HashStream())
+			using(var hs = new HashStream())
 			{
 				this.ReadWrite(new BitcoinStream(hs, true)
 				{
