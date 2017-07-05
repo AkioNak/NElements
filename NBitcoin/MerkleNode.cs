@@ -64,6 +64,13 @@ namespace NBitcoin
 			}
 		}
 
+		public void UpdateFastHash()
+		{
+			var right = Right ?? Left;
+			if(Left != null && Left.Hash != null && right.Hash != null)
+				_Hash = Hashes.FastSHA256(Left.Hash.ToBytes().Concat(right.Hash.ToBytes()).ToArray());
+		}
+
 		public void UpdateHash()
 		{
 			var right = Right ?? Left;

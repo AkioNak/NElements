@@ -257,7 +257,7 @@ namespace NBitcoin
 			{
 				_Commitment = value;
 			}
-		}		
+		}
 
 		const int nCommittedSize = 33;
 		public void ReadWrite(BitcoinStream stream)
@@ -375,7 +375,7 @@ namespace NBitcoin
 			{
 				return _Amount.Amount;
 			}
-		}		
+		}
 
 		public void ReadWrite(BitcoinStream stream)
 		{
@@ -432,6 +432,23 @@ namespace NBitcoin
 				prevout = value;
 			}
 		}
+
+		public uint256 GetIssuedAssetId()
+		{
+			if(AssetIssuance?.BlindingNonce != uint256.Zero)
+				return null;
+			var assetEntropy = new MerkleNode(
+				new MerkleNode(Hashes.Hash256(PrevOut.ToBytes())),
+				new MerkleNode(new uint256(AssetIssuance.Entropy.ToBytes())));
+			assetEntropy.UpdateFastHash();
+
+			var asset = new MerkleNode(
+				new MerkleNode(assetEntropy.Hash),
+				new MerkleNode(uint256.Zero));
+			asset.UpdateFastHash();
+			return asset.Hash;
+		}
+
 
 
 		public Script ScriptSig
@@ -845,7 +862,7 @@ namespace NBitcoin
 		}
 
 		static uint256 _BTC = new uint256("09f663de96be771f50cab5ded00256ffe63773e2eaa9a604092951cc3d7c6621");
-		public ConfidentialAsset():base(ToCommitment(_BTC))
+		public ConfidentialAsset() : base(ToCommitment(_BTC))
 		{
 
 		}
@@ -1171,6 +1188,11 @@ namespace NBitcoin
 				Index = (uint)i,
 				Transaction = Transaction
 			});
+		}
+
+		public IEnumerable<object> Where(Func<TxIn, bool> p)
+		{
+			throw new NotImplementedException();
 		}
 	}
 
@@ -1529,7 +1551,7 @@ namespace NBitcoin
 
 					bytes = _Outputs[i].RangeProof;
 					stream.ReadWriteAsVarString(ref bytes);
-					
+
 				}
 				else
 				{

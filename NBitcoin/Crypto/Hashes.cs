@@ -27,6 +27,18 @@ namespace NBitcoin.Crypto
 			return Hash256(data, 0, count);
 		}
 
+		public static uint256 FastSHA256(byte[] data)
+		{
+			return FastSHA256(data, 0, data.Length);
+		}
+
+		public static uint256 FastSHA256(byte[] data, int offset, int count)
+		{
+			Sha256Digest sha256 = new Sha256Digest();
+			sha256.BlockUpdate(data, offset, count);
+			return new uint256(sha256.MidState);
+		}
+
 		public static uint256 Hash256(byte[] data, int offset, int count)
 		{
 #if USEBC || WINDOWS_UWP || NETCORE
