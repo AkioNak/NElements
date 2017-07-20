@@ -85,6 +85,22 @@ namespace NBitcoin
 	{
 		internal byte[][] base58Prefixes = new byte[13][];
 		internal Bech32Encoder[] bech32Encoders = new Bech32Encoder[2];
+
+		private static Network _DefaultMain;
+		public static Network DefaultMain
+		{
+			get
+			{
+				return _DefaultMain;
+			}
+		}
+
+		public bool IsMain
+		{
+			get;
+			internal set;
+		}
+
 		public Bech32Encoder GetBech32Encoder(Bech32Type type, bool throws)
 		{
 			var encoder = bech32Encoders[(int)type];
@@ -635,6 +651,32 @@ namespace NBitcoin
 			//_TestNet.InitTest();
 			//_TestNet.Consensus.Freeze();
 
+			_DefaultMain = new Network()
+			{
+				nDefaultPort = 7042,
+				nRPCPort = 9041,
+				IsMain = true
+			};
+
+			_DefaultMain.base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { (235) };
+			_DefaultMain.base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { (40) };
+			_DefaultMain.base58Prefixes[(int)Base58Type.BLINDED_ADDRESS] = new byte[] { (4) };
+			_DefaultMain.base58Prefixes[(int)Base58Type.SECRET_KEY] = new byte[] { (239) };
+			_DefaultMain.base58Prefixes[(int)Base58Type.EXT_PUBLIC_KEY] = new byte[] { (0x04), (0x35), (0x87), (0xCF) };
+			_DefaultMain.base58Prefixes[(int)Base58Type.EXT_SECRET_KEY] = new byte[] { (0x04), (0x35), (0x83), (0x94) };
+			_DefaultMain.base58Prefixes[(int)Base58Type.COLORED_ADDRESS] = new byte[] { 0x13 };
+
+			//base58Prefixes[PUBKEY_ADDRESS] = std::vector < unsigned char> (1, 235);
+			//base58Prefixes[SCRIPT_ADDRESS] = std::vector < unsigned char> (1, 40);
+			//base58Prefixes[BLINDED_ADDRESS] = std::vector < unsigned char> (1, 4);
+			//base58Prefixes[SECRET_KEY] = std::vector < unsigned char> (1, 239);
+			//base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x35)(0x87)(0xCF).convert_to_container < std::vector < unsigned char> > ();
+			//base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x35)(0x83)(0x94).convert_to_container < std::vector < unsigned char> > ();
+
+			//base58Prefixes[PARENT_PUBKEY_ADDRESS] = std::vector < unsigned char> (1, 111);
+			//base58Prefixes[PARENT_SCRIPT_ADDRESS] = std::vector < unsigned char> (1, 196);
+
+
 			_RegTest = new Network();
 			_RegTest.InitReg();
 		}
@@ -694,12 +736,12 @@ namespace NBitcoin
 				network.vFixedSeeds.Add(seed);
 			}
 #endif
-			network.base58Prefixes = Network.Main.base58Prefixes.ToArray();
+			network.base58Prefixes = Network.RegTest.base58Prefixes.ToArray();
 			foreach(var kv in builder._Base58Prefixes)
 			{
 				network.base58Prefixes[(int)kv.Key] = kv.Value;
 			}
-			network.bech32Encoders = Network.Main.bech32Encoders.ToArray();
+			network.bech32Encoders = Network.RegTest.bech32Encoders.ToArray();
 			foreach(var kv in builder._Bech32Prefixes)
 			{
 				network.bech32Encoders[(int)kv.Key] = kv.Value;
@@ -863,6 +905,33 @@ namespace NBitcoin
 			bech32Encoders[(int)Bech32Type.WITNESS_PUBKEY_ADDRESS] = encoder;
 			bech32Encoders[(int)Bech32Type.WITNESS_SCRIPT_ADDRESS] = encoder;
 		}
+
+
+		public Network CreateNetwork(string name, Block genesis)
+		{
+			var network =
+				new NetworkBuilder()
+				.SetName(name)
+				.SetPort(_DefaultMain.DefaultPort)
+				.SetRPCPort(_DefaultMain.RPCPort)
+				.SetMagic(0xea1fb1ef)
+				.SetBase58Bytes(Base58Type.PUBKEY_ADDRESS, new byte[] { 235 })
+				.SetBase58Bytes(Base58Type.SCRIPT_ADDRESS, new byte[] { 40 })
+				.SetBase58Bytes(Base58Type.BLINDED_ADDRESS, new byte[] { 4 })
+				.SetBase58Bytes(Base58Type.SECRET_KEY, new byte[] { 239 })
+				.SetBase58Bytes(Base58Type.EXT_PUBLIC_KEY, new byte[] { 0x04, 0x35, 0x87, 0xCF })
+				.SetBase58Bytes(Base58Type.EXT_SECRET_KEY, new byte[] { 0x04, 0x35, 0x83, 0x94 })
+				.SetConsensus(new Consensus()
+				{
+					BIP34Hash = new uint256("000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8"),
+					CoinbaseMaturity = 10
+				})
+				.SetGenesis(genesis)
+				.BuildAndRegister();
+			network.IsMain = true;
+			return network;
+		}
+
 		private void InitReg()
 		{
 			name = "RegTest";

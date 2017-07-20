@@ -258,7 +258,7 @@ namespace NBitcoin.RPC
 				bitcoinFolder = Path.Combine(home, ".bitcoin");
 			else
 				bitcoinFolder = Path.Combine(localAppData, "Bitcoin");
-			if(network == Network.Main)
+			if(network.IsMain)
 				bitcoinFolder = Path.Combine(bitcoinFolder, "elements");
 			if(network == Network.RegTest)
 				bitcoinFolder = Path.Combine(bitcoinFolder, "elementsregtest");
