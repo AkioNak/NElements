@@ -95,12 +95,6 @@ namespace NBitcoin
 			}
 		}
 
-		public bool IsMain
-		{
-			get;
-			internal set;
-		}
-
 		public Bech32Encoder GetBech32Encoder(Bech32Type type, bool throws)
 		{
 			var encoder = bech32Encoders[(int)type];
@@ -655,9 +649,8 @@ namespace NBitcoin
 			{
 				nDefaultPort = 7042,
 				nRPCPort = 9041,
-				IsMain = true
+				_DefaultRpcDirectory = "elements"
 			};
-
 			_DefaultMain.base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { (235) };
 			_DefaultMain.base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { (40) };
 			_DefaultMain.base58Prefixes[(int)Base58Type.BLINDED_ADDRESS] = new byte[] { (4) };
@@ -764,7 +757,7 @@ namespace NBitcoin
 		private void InitMain()
 		{
 			name = "Main";
-
+			_DefaultRpcDirectory = "elements";
 			consensus.CoinbaseMaturity = 100;
 			consensus.SubsidyHalvingInterval = 210000;
 			consensus.MajorityEnforceBlockUpgrade = 750;
@@ -907,29 +900,39 @@ namespace NBitcoin
 		}
 
 
-		public Network CreateNetwork(string name, Block genesis)
+		public Network CreateNetwork(string name, Network parent, Block genesis)
 		{
-			var network =
+			var builder =
 				new NetworkBuilder()
 				.SetName(name)
-				.SetPort(_DefaultMain.DefaultPort)
-				.SetRPCPort(_DefaultMain.RPCPort)
-				.SetMagic(0xea1fb1ef)
-				.SetBase58Bytes(Base58Type.PUBKEY_ADDRESS, new byte[] { 235 })
-				.SetBase58Bytes(Base58Type.SCRIPT_ADDRESS, new byte[] { 40 })
-				.SetBase58Bytes(Base58Type.BLINDED_ADDRESS, new byte[] { 4 })
-				.SetBase58Bytes(Base58Type.SECRET_KEY, new byte[] { 239 })
-				.SetBase58Bytes(Base58Type.EXT_PUBLIC_KEY, new byte[] { 0x04, 0x35, 0x87, 0xCF })
-				.SetBase58Bytes(Base58Type.EXT_SECRET_KEY, new byte[] { 0x04, 0x35, 0x83, 0x94 })
-				.SetConsensus(new Consensus()
-				{
-					BIP34Hash = new uint256("000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8"),
-					CoinbaseMaturity = 10
-				})
-				.SetGenesis(genesis)
-				.BuildAndRegister();
-			network.IsMain = true;
+				.SetPort(parent.DefaultPort)
+				.SetRPCPort(parent.RPCPort)
+				.SetMagic(parent.magic);
+
+			int i = 0;
+			foreach(var item in parent.base58Prefixes)
+			{
+				builder.SetBase58Bytes((Base58Type)i++, item);
+			}
+
+			var network = builder.SetConsensus(new Consensus()
+			{
+				BIP34Hash = new uint256("000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8"),
+				CoinbaseMaturity = parent.Consensus.CoinbaseMaturity
+			})
+			.SetGenesis(genesis)
+			.BuildAndRegister();
+			network._DefaultRpcDirectory = parent._DefaultRpcDirectory;
 			return network;
+		}
+
+		string _DefaultRpcDirectory;
+		public string DefaultRPCDirectory
+		{
+			get
+			{
+				return _DefaultRpcDirectory;
+			}
 		}
 
 		private void InitReg()
@@ -951,7 +954,7 @@ namespace NBitcoin
 			consensus.PowNoRetargeting = true;
 			consensus.RuleChangeActivationThreshold = 108;
 			consensus.MinerConfirmationWindow = 144;
-
+			_DefaultRpcDirectory = "elementsregtest";
 			magic = 0xDAB5BFFA;
 
 			consensus.BIP9Deployments[BIP9Deployments.TestDummy] = new BIP9DeploymentsParameters(28, 0, 999999999);
