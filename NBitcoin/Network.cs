@@ -649,7 +649,8 @@ namespace NBitcoin
 			{
 				nDefaultPort = 7042,
 				nRPCPort = 9041,
-				_DefaultRpcDirectory = "elements"
+				_DefaultRpcDirectory = "elements",
+				magic = 0xea1fb1ef
 			};
 			_DefaultMain.base58Prefixes[(int)Base58Type.PUBKEY_ADDRESS] = new byte[] { (235) };
 			_DefaultMain.base58Prefixes[(int)Base58Type.SCRIPT_ADDRESS] = new byte[] { (40) };
